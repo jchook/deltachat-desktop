@@ -5,19 +5,20 @@ import React, {
   useContext,
   useCallback,
   ComponentType,
+  useMemo,
 } from 'react'
 import { useChatListContextMenu } from './ChatListContextMenu'
 import { useMessageResults, useChatList } from './ChatListHelpers'
-import ChatListItem, {
-  ChatListItemMessageResult,
-  PlaceholderChatListItem,
-} from './ChatListItem'
+import {
+  ChatListItemRowChat,
+  ChatListItemRowContact,
+  ChatListItemRowMessage,
+} from './ChatListItemRow'
 import { PseudoListItemAddContact } from '../helpers/PseudoListItem'
 import { C } from 'deltachat-node/dist/constants'
 import { selectChat } from '../../stores/chat'
 import { DeltaBackend } from '../../delta-remote'
 import { isValidEmail } from '../../../shared/util'
-import { ContactListItem } from '../contact/ContactListItem'
 import { useContactIds } from '../contact/ContactList'
 import {
   ChatListItemType,
@@ -36,7 +37,6 @@ import { ipcBackend } from '../../ipc'
 import { ScreenContext } from '../../contexts'
 import { KeybindAction, useKeyBindingAction } from '../../keybindings'
 import { getLogger } from '../../../shared/logger'
-import { openViewProfileDialog } from '../helpers/ChatMethods'
 
 const log = getLogger('renderer/chatlist')
 
@@ -57,6 +57,7 @@ export function ChatListPart({
   height,
   itemKey,
   setListRef,
+  itemData,
 }: {
   isRowLoaded: (index: number) => boolean
   loadMoreRows: (startIndex: number, stopIndex: number) => Promise<any>
@@ -66,6 +67,7 @@ export function ChatListPart({
   height: number
   itemKey: ListItemKeySelector<any>
   setListRef?: (ref: List<any>) => void
+  itemData?: any
 }) {
   return (
     <InfiniteLoader
@@ -86,6 +88,7 @@ export function ChatListPart({
           }}
           width={width}
           itemKey={itemKey}
+          itemData={itemData}
         >
           {children}
         </List>
@@ -211,6 +214,28 @@ export default function ChatList(props: {
     selectFirstChat()
   )
 
+  const chatlistData = useMemo(() => {
+    return {
+      selectedChatId,
+      chatListIds,
+      chatCache,
+      onChatClick,
+      openContextMenu,
+    }
+  }, [selectedChatId, chatListIds, chatCache, onChatClick, openContextMenu])
+
+  const contactlistData = useMemo(() => {
+    return {
+      contactCache,
+      contactIds,
+      screenContext,
+    }
+  }, [contactCache, contactIds, screenContext])
+
+  const messagelistData = useMemo(() => {
+    return { messageResultIds, messageCache, openDialog, queryStr }
+  }, [messageResultIds, messageCache, openDialog, queryStr])
+
   // Render --------------------
   return (
     <>
@@ -231,23 +256,9 @@ export default function ChatList(props: {
                 height={chatsHeight(height)}
                 setListRef={(ref: List<any>) => (listRefRef.current = ref)}
                 itemKey={index => 'key' + chatListIds[index]}
+                itemData={chatlistData}
               >
-                {({ index, style }) => {
-                  const [chatId] = chatListIds[index]
-                  return (
-                    <div style={style}>
-                      <ChatListItem
-                        isSelected={selectedChatId === chatId}
-                        chatListItem={chatCache[chatId] || undefined}
-                        onClick={onChatClick.bind(null, chatId)}
-                        onContextMenu={event => {
-                          const chat = chatCache[chatId]
-                          openContextMenu(event, chat, selectedChatId)
-                        }}
-                      />
-                    </div>
-                  )
-                }}
+                {ChatListItemRowChat}
               </ChatListPart>
               {isSearchActive && (
                 <>
@@ -264,30 +275,12 @@ export default function ChatList(props: {
                     width={width}
                     height={contactsHeight(height)}
                     itemKey={index => 'key' + contactIds[index]}
+                    itemData={contactlistData}
                   >
-                    {({ index, style }) => {
-                      const contactId = contactIds[index]
-                      return (
-                        <div style={style}>
-                          {contactCache[contactId] ? (
-                            <ContactListItem
-                              contact={contactCache[contactId]}
-                              showCheckbox={false}
-                              checked={false}
-                              showRemove={false}
-                              onClick={async _ => {
-                                openViewProfileDialog(screenContext, contactId)
-                              }}
-                            />
-                          ) : (
-                            <PlaceholderChatListItem />
-                          )}
-                        </div>
-                      )
-                    }}
+                    {ChatListItemRowContact}
                   </ChatListPart>
                   {chatListIds.length === 0 && queryStrIsEmail && (
-                    <div style={{ width: '30vw' }}>
+                    <div style={{ width: width }}>
                       <PseudoListItemAddContact
                         queryStr={queryStr}
                         queryStrIsEmail={queryStrIsEmail}
@@ -312,27 +305,9 @@ export default function ChatList(props: {
                       messagesHeight(height)
                     }
                     itemKey={index => 'key' + messageResultIds[index]}
+                    itemData={messagelistData}
                   >
-                    {({ index, style }) => {
-                      const msrId = messageResultIds[index]
-                      return (
-                        <div style={style}>
-                          {messageCache[msrId] ? (
-                            <ChatListItemMessageResult
-                              queryStr={queryStr}
-                              msr={messageCache[msrId]}
-                              onClick={() => {
-                                openDialog('MessageDetail', {
-                                  id: msrId,
-                                })
-                              }}
-                            />
-                          ) : (
-                            <div className='pseudo-chat-list-item skeleton' />
-                          )}
-                        </div>
-                      )
-                    }}
+                    {ChatListItemRowMessage}
                   </ChatListPart>
                 </>
               )}
