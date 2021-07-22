@@ -4,6 +4,7 @@
 
 ### Changed
 - Update some dependencies (`classnames`, `emoji-regex`, `mime-types`, `use-debounce`) and remove unused ones (`immutability-helper`, `@blueprintjs/select`, `wolfy87-eventemitter`, `@types/classnames`, `@types/css`, `@types/sass`, `depcheck`, `pngjs`)
+- Update testcafe to `1.15.0`
 
 ## [1.20.3] - 2021-06-30
 
