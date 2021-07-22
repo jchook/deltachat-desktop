@@ -2,6 +2,9 @@
 
 ## [Unreleased][unreleased]
 
+### Fixed
+- fix duplicated contacts in search
+
 ### Changed
 
 - Update testcafe to `1.15.0`
